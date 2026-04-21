@@ -28,9 +28,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const assessmentForm = document.getElementById('assessment-form');
 
     let currentStep = 1;
+    let analyzingInterval = null;
 
     // --- ROUTING / VIEW LOGIC ---
     function navigateTo(viewId) {
+        // If leaving analyzing view, clear the interval
+        if (analyzingInterval) {
+            clearInterval(analyzingInterval);
+            analyzingInterval = null;
+        }
+
         views.forEach(v => v.classList.remove('active'));
         const targetView = document.getElementById(viewId);
         if (targetView) {
@@ -105,6 +112,18 @@ document.addEventListener('DOMContentLoaded', () => {
         
         stepDisplay.textContent = currentStep;
 
+        // Update step progress dots
+        document.querySelectorAll('.step-dot').forEach(dot => {
+            const dotStep = parseInt(dot.dataset.stepDot);
+            dot.classList.remove('active', 'completed');
+            if (dotStep === currentStep) dot.classList.add('active');
+            else if (dotStep < currentStep) dot.classList.add('completed');
+        });
+        document.querySelectorAll('.step-line').forEach(line => {
+            const lineStep = parseInt(line.dataset.stepLine);
+            line.classList.toggle('active', lineStep < currentStep);
+        });
+
         // Button visibility
         if (currentStep === 1) {
             btnPrev.classList.add('hidden');
@@ -163,6 +182,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (ageDisplay && ageInput) {
             ageDisplay.textContent = ageInput.value;
         }
+        // Clear stale state
+        appState = { age: null, branch: null, screentime: null, purpose: null, sleep: null, headache: null };
+        finalScore = 0;
+        if (analyzingInterval) {
+            clearInterval(analyzingInterval);
+            analyzingInterval = null;
+        }
     }
 
     // --- SUBMIT & ANALYZE ---
@@ -184,8 +210,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function startAnalyzing() {
+        // Clear any previous analyzing interval
+        if (analyzingInterval) {
+            clearInterval(analyzingInterval);
+            analyzingInterval = null;
+        }
+
         const progressBar = document.getElementById('analyzing-progress');
         const textEl = document.getElementById('analyzing-text');
+
+        // Reset progress bar and text
+        if (progressBar) progressBar.style.width = '0%';
+        if (textEl) textEl.textContent = 'Generating personalized insights based on your inputs.';
 
         const steps = [
             "Analyzing sleep patterns...",
@@ -197,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let progress = 0;
         let stepIndex = 0;
 
-        const interval = setInterval(() => {
+        analyzingInterval = setInterval(() => {
             progress += 5;
             progressBar.style.width = progress + "%";
 
@@ -207,7 +243,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (progress >= 100) {
-                clearInterval(interval);
+                clearInterval(analyzingInterval);
+                analyzingInterval = null;
                 generateResults();
 
                 setTimeout(() => {
