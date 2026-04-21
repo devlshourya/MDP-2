@@ -243,6 +243,43 @@ document.addEventListener('DOMContentLoaded', () => {
         
         finalScore = Math.max(0, Math.min(100, score));
 
+        // --- DATA SUMMARY ---
+        const sumScreen = document.getElementById('summary-screen');
+        if (sumScreen) sumScreen.textContent = appState.screentime + 'h';
+        const sumSleep = document.getElementById('summary-sleep');
+        if (sumSleep) sumSleep.textContent = appState.sleep + 'h';
+        const sumBranch = document.getElementById('summary-branch');
+        if (sumBranch) {
+            let branchStr = appState.branch;
+            if (branchStr === 'other') branchStr = 'Other';
+            else if (branchStr === 'mechanical') branchStr = 'Mech';
+            else if (branchStr === 'civil') branchStr = 'Civil';
+            else branchStr = branchStr ? branchStr.toUpperCase() : '';
+            sumBranch.textContent = branchStr;
+        }
+
+        // --- TREND DISPLAY ---
+        const lastScoreForTrend = localStorage.getItem('lastScore');
+        const trendDisplay = document.getElementById('trend-display');
+        if (trendDisplay) {
+            if (lastScoreForTrend) {
+                const diff = finalScore - parseInt(lastScoreForTrend);
+                trendDisplay.style.opacity = '1';
+                if (diff > 0) {
+                    trendDisplay.textContent = `↑ +${diff} points since last time`;
+                    trendDisplay.style.color = 'var(--accent-green)';
+                } else if (diff < 0) {
+                    trendDisplay.textContent = `↓ ${Math.abs(diff)} points since last time`;
+                    trendDisplay.style.color = 'var(--accent-red)';
+                } else {
+                    trendDisplay.textContent = `No change since last time`;
+                    trendDisplay.style.color = 'var(--text-muted)';
+                }
+            } else {
+                trendDisplay.style.opacity = '0';
+            }
+        }
+
         // --- AI INSIGHT ---
         const insightEl = document.getElementById('ai-insight-text');
 
