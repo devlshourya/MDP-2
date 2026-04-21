@@ -185,16 +185,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function startAnalyzing() {
         const progressBar = document.getElementById('analyzing-progress');
+        const textEl = document.getElementById('analyzing-text');
+
+        const steps = [
+            "Analyzing sleep patterns...",
+            "Evaluating screen exposure...",
+            "Mapping cognitive load...",
+            "Generating AI insights..."
+        ];
+
         let progress = 0;
-        progressBar.style.width = '0%';
+        let stepIndex = 0;
 
         const interval = setInterval(() => {
-            progress += 5; // increment progress
-            progressBar.style.width = progress + '%';
-            
+            progress += 5;
+            progressBar.style.width = progress + "%";
+
+            if (stepIndex < steps.length && progress % 25 === 0) {
+                if (textEl) textEl.textContent = steps[stepIndex];
+                stepIndex++;
+            }
+
             if (progress >= 100) {
                 clearInterval(interval);
                 generateResults();
+
                 setTimeout(() => {
                     navigateTo('view-results');
                     animateGauge(finalScore);
@@ -207,66 +222,124 @@ document.addEventListener('DOMContentLoaded', () => {
     let finalScore = 0;
 
     function generateResults() {
-        // Simple mock algorithm
-        let score = 100;
+        // --- 1. WEIGHTED SCORING LOGIC ---
+        let sleepScore = 40;
+        if (appState.sleep < 5) sleepScore = 10;
+        else if (appState.sleep < 7) sleepScore = 25;
+        else if (appState.sleep > 9) sleepScore = 30;
+
+        let screenScore = 40;
+        if (appState.screentime > 12) screenScore = 5;
+        else if (appState.screentime > 8) screenScore = 15;
+        else if (appState.screentime > 5) screenScore = 30;
+
+        let headacheScore = 20;
+        if (appState.headache === 'often') headacheScore = 5;
+        else if (appState.headache === 'sometimes') headacheScore = 12;
+
+        let score = sleepScore + screenScore + headacheScore;
+
+        if (appState.purpose === 'gaming' && appState.screentime > 6) score -= 5;
         
-        // Sleep factor
-        if (appState.sleep < 6) score -= 15;
-        else if (appState.sleep < 7) score -= 5;
-        else if (appState.sleep >= 8) score += 5;
+        finalScore = Math.max(0, Math.min(100, score));
 
-        // Screentime factor
-        if (appState.screentime > 8) score -= 15;
-        else if (appState.screentime > 5) score -= 5;
+        // --- AI INSIGHT ---
+        const insightEl = document.getElementById('ai-insight-text');
 
-        // Headache factor
-        if (appState.headache === 'often') score -= 20;
-        else if (appState.headache === 'sometimes') score -= 10;
+        let insight = "";
 
-        score = Math.max(0, Math.min(100, score)); // Clamp between 0-100
-        finalScore = score;
-
-        // Update DOM elements based on score
-        
-        // Status text
-        const statusText = document.getElementById('score-status-text');
-        const regulationStatus = document.getElementById('regulation-status');
-        if (score >= 80) {
-            statusText.textContent = "Resilient";
-            regulationStatus.textContent = "well-regulated.";
-            regulationStatus.style.color = "var(--accent-teal)";
-        } else if (score >= 60) {
-            statusText.textContent = "Moderate";
-            regulationStatus.textContent = "experiencing minor strain.";
-            regulationStatus.style.color = "var(--accent-teal)";
+        if (appState.sleep < 6 && appState.screentime > 7) {
+            insight = `Your high screen time (${appState.screentime}h) combined with low sleep (${appState.sleep}h) is creating cognitive fatigue, which is likely reducing your productivity and increasing strain.`;
+        } else if (appState.sleep >= 7 && appState.screentime < 5) {
+            insight = `Your balanced sleep and controlled screen time indicate a stable cognitive state with good recovery and focus levels.`;
         } else {
-            statusText.textContent = "At Risk";
-            regulationStatus.textContent = "overloaded.";
-            regulationStatus.style.color = "var(--accent-red)";
+            insight = `Your current habits show moderate strain. Small improvements in sleep and screen usage can significantly improve your performance.`;
         }
 
-        // Signals text
-        document.getElementById('signal-issue').textContent = appState.headache === 'often' ? 'chronic headache' : (appState.headache === 'sometimes' ? 'mild headache' : 'eye strain');
-        
-        let prodReading = 'medium';
-        if (score >= 85) prodReading = 'high';
-        if (score < 60) prodReading = 'low';
-        document.getElementById('signal-productivity').textContent = prodReading;
+        if (insightEl) insightEl.textContent = insight;
 
-        // Card 1: Issue
-        document.getElementById('card-issue-title').textContent = document.getElementById('signal-issue').textContent.replace(/\b\w/g, l => l.toUpperCase());
-        
-        // Card 2: Productivity
-        document.getElementById('card-prod-title').textContent = prodReading.charAt(0).toUpperCase() + prodReading.slice(1);
-        const prodDesc = prodReading === 'high' ? 'Excellent baseline. You are optimizing your output.' : (prodReading === 'low' ? 'Your output is being restricted by habits.' : 'Solid baseline — small recoveries will lift you to high.');
-        document.getElementById('card-prod-desc').textContent = prodDesc;
 
-        // Card 3: Risk Level
-        let riskLvl = 'Low';
-        if (score < 60) riskLvl = 'High';
-        else if (score < 80) riskLvl = 'Medium';
-        document.getElementById('card-risk-title').textContent = riskLvl;
-        document.getElementById('card-risk-desc').textContent = riskLvl === 'Low' ? 'Risk markers are quiet. Maintain consistency.' : 'Your habits indicate potential long-term fatigue.';
+        // --- RECOMMENDATIONS ---
+        const recEl = document.getElementById('recommendations-list');
+
+        let tips = [];
+
+        if (appState.sleep < 7) {
+            tips.push("Increase sleep to at least 7–8 hours for optimal recovery.");
+        }
+        if (appState.screentime > 6) {
+            tips.push("Reduce screen exposure using the 20-20-20 rule.");
+        }
+        if (appState.headache === "often") {
+            tips.push("Frequent headaches detected — improve posture and hydration.");
+        }
+        if (appState.screentime > 8) {
+            tips.push("Consider taking scheduled digital detox breaks.");
+        }
+
+        if (recEl) {
+            recEl.innerHTML = tips.map(t => `<li>${t}</li>`).join('');
+        }
+
+
+        // --- RISK PREDICTION ---
+        const riskEl = document.getElementById('risk-prediction');
+
+        let riskMsg = "";
+
+        if (finalScore < 60) {
+            riskMsg = "High risk: Continued habits may lead to burnout within weeks.";
+        } else if (finalScore < 80) {
+            riskMsg = "Moderate risk: Some strain detected — improvement recommended.";
+        } else {
+            riskMsg = "Low risk: Your habits are sustainable.";
+        }
+
+        if (riskEl) riskEl.textContent = riskMsg;
+
+
+        // --- SAVE HISTORY ---
+        localStorage.setItem("lastScore", finalScore);
+
+        const prev = localStorage.getItem("lastScore");
+        const compareEl = document.getElementById("previous-score");
+
+        if (prev && compareEl) {
+            compareEl.textContent = `Previous Score: ${prev}`;
+        }
+
+        const ctx = document.getElementById('healthChart');
+
+        if (ctx) {
+            // Check if chart exists and destroy it before recreating
+            if (window.myHealthChart) {
+                window.myHealthChart.destroy();
+            }
+            window.myHealthChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Sleep', 'Screen Time'],
+                    datasets: [{
+                        label: 'Your Habits',
+                        data: [appState.sleep, appState.screentime],
+                        backgroundColor: ['#6b9e9e', '#d96c75']
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+        
+        // update score text just in case html still has it
+        const statusText = document.getElementById('score-status-text');
+        if (statusText) {
+            if (finalScore >= 80) statusText.textContent = "Resilient";
+            else if (finalScore >= 60) statusText.textContent = "Moderate";
+            else statusText.textContent = "At Risk";
+        }
     }
 
     // --- GAUGE ANIMATION ---
@@ -275,6 +348,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const scoreElement = document.getElementById('score-value');
         const gaugeValue = document.querySelector('.gauge-value');
         
+        gaugeValue.classList.remove('gauge-good', 'gauge-warn', 'gauge-risk');
+        if (targetScore >= 80) gaugeValue.classList.add('gauge-good');
+        else if (targetScore >= 60) gaugeValue.classList.add('gauge-warn');
+        else gaugeValue.classList.add('gauge-risk');
+
         // Reset before animating
         gaugeValue.style.transition = 'none';
         gaugeValue.style.strokeDashoffset = 283;
